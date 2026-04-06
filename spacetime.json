@@ -1,0 +1,8 @@
+{
+  "dev": {
+    "run": "dotnet run"
+  },
+  "module-path": "./spacetimedb",
+  "server": "local",
+  "database": "spacepong"
+}
