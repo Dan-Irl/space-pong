@@ -1,13 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSpacetimeDB, useTable, useReducer } from 'spacetimedb/react';
 import { reducers, tables } from './module_bindings';
+import { GameCanvas } from './components/GameCanvas';
 import './App.css';
 
 function App() {
   const [playerName, setPlayerName] = useState('');
   const [hasJoined, setHasJoined] = useState(false);
-  const [aimAngle, setAimAngle] = useState(0);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const { identity, isActive: connected } = useSpacetimeDB();
   const joinGame = useReducer(reducers.joinGame);
@@ -27,7 +26,6 @@ function App() {
   useEffect(() => {
     if (currentPlayer) {
       setHasJoined(true);
-      setAimAngle(currentPlayer.aimAngle);
     } else {
       setHasJoined(false);
     }
@@ -41,122 +39,15 @@ function App() {
     }
   };
 
-  // Handle mouse move for aiming
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!hasJoined || !currentPlayer || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left - canvas.width / 2;
-    const mouseY = e.clientY - rect.top - canvas.height / 2;
-    
-    const angle = Math.atan2(mouseY, mouseX);
-    const normalizedAngle = angle < 0 ? angle + Math.PI * 2 : angle;
-    
-    setAimAngle(normalizedAngle);
-    movePlayer({ newAngle: normalizedAngle });
+  // Handle player movement
+  const handleMove = (angle: number) => {
+    movePlayer({ newAngle: angle });
   };
 
   // Handle shooting
   const handleShoot = () => {
-    if (!hasJoined) return;
     spawnBall();
   };
-
-  // Handle keyboard input
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && hasJoined) {
-        e.preventDefault();
-        handleShoot();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasJoined]);
-
-  // Render game on canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const scale = 200; // Scale factor for game coordinates
-
-    // Draw center
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Draw players
-    players.forEach(player => {
-      const x = centerX + player.x * scale;
-      const y = centerY + player.y * scale;
-      const isCurrentPlayer = identity?.isEqual(player.id);
-
-      // Draw player position
-      ctx.fillStyle = isCurrentPlayer ? '#00ff00' : '#0088ff';
-      ctx.beginPath();
-      ctx.arc(x, y, 15, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Draw player paddle arc
-      const radius = Math.sqrt(player.x * player.x + player.y * player.y) * scale;
-      ctx.strokeStyle = isCurrentPlayer ? '#00ff00' : '#0088ff';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      const paddleAngle = Math.atan2(player.y, player.x);
-      ctx.arc(
-        centerX, 
-        centerY, 
-        radius,
-        paddleAngle - player.paddleSize / 2,
-        paddleAngle + player.paddleSize / 2
-      );
-      ctx.stroke();
-
-      // Draw aim line for current player
-      if (isCurrentPlayer) {
-        ctx.strokeStyle = '#ffff00';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        const aimLength = 50;
-        ctx.lineTo(
-          x + Math.cos(player.aimAngle) * aimLength,
-          y + Math.sin(player.aimAngle) * aimLength
-        );
-        ctx.stroke();
-      }
-
-      // Draw player name
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(player.name, x, y - 25);
-    });
-
-    // Draw balls
-    balls.forEach(ball => {
-      const x = centerX + ball.x * scale;
-      const y = centerY + ball.y * scale;
-
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath();
-      ctx.arc(x, y, ball.radius * scale, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  }, [players, balls, identity, aimAngle]);
 
   if (!connected || !identity) {
     return <div className="loading">Connecting to SpacetimeDB...</div>;
@@ -192,12 +83,13 @@ function App() {
           <button onClick={handleShoot}>Shoot Ball (Space)</button>
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={800}
-        height={800}
-        onMouseMove={handleMouseMove}
-        onClick={handleShoot}
+      <GameCanvas
+        players={players}
+        balls={balls}
+        identity={identity}
+        hasJoined={hasJoined}
+        onMove={handleMove}
+        onShoot={handleShoot}
       />
     </div>
   );
