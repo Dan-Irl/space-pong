@@ -78,10 +78,6 @@ function App() {
         <h2>Space Pong</h2>
         <p>Player: {currentPlayer?.name}</p>
         <p>Players: {players.length} | Balls: {balls.length}</p>
-        <div className="controls">
-          <p>Move mouse to aim</p>
-          <button onClick={handleShoot}>Shoot Ball (Space)</button>
-        </div>
       </div>
       <GameCanvas
         players={players}
