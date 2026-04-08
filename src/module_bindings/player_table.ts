@@ -17,4 +17,6 @@ export default __t.row({
   name: __t.string(),
   aimAngle: __t.f32().name("aim_angle"),
   paddleSize: __t.f32().name("paddle_size"),
+  paddleRadius: __t.i32().name("paddle_radius"),
+  playerRadius: __t.f32().name("player_radius"),
 });

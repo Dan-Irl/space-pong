@@ -29,6 +29,8 @@ export const Player = __t.object("Player", {
   name: __t.string(),
   aimAngle: __t.f32(),
   paddleSize: __t.f32(),
+  paddleRadius: __t.i32(),
+  playerRadius: __t.f32(),
 });
 export type Player = __Infer<typeof Player>;
 
