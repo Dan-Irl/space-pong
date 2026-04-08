@@ -9,38 +9,26 @@ type Ball = Infer<typeof BallRow>;
 
 export class GameRenderer {
   private ctx: CanvasRenderingContext2D;
-  private centerX: number;
-  private centerY: number;
-  private scale: number;
+  private canvasWidth: number;
+  private canvasHeight: number;
   private playerRenderer: PlayerRenderer;
 
-  constructor(ctx: CanvasRenderingContext2D, width: number, height: number, scale = 200) {
+  constructor(ctx: CanvasRenderingContext2D, width: number, height: number) {
     this.ctx = ctx;
-    this.centerX = width / 2;
-    this.centerY = height / 2;
-    this.scale = scale;
-    this.playerRenderer = new PlayerRenderer(ctx, this.centerX, this.centerY, this.scale);
+    this.canvasWidth = width;
+    this.canvasHeight = height;
+    this.playerRenderer = new PlayerRenderer(ctx);
   }
 
   clear() {
     this.ctx.fillStyle = '#0a0a0a';
-    this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-  }
-
-  drawCenter() {
-    this.ctx.fillStyle = '#333';
-    this.ctx.beginPath();
-    this.ctx.arc(this.centerX, this.centerY, 10, 0, Math.PI * 2);
-    this.ctx.fill();
+    this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
   }
 
   drawBall(ball: Ball) {
-    const x = this.centerX + ball.x * this.scale;
-    const y = this.centerY + ball.y * this.scale;
-
     this.ctx.fillStyle = '#ff0000';
     this.ctx.beginPath();
-    this.ctx.arc(x, y, ball.radius * this.scale, 0, Math.PI * 2);
+    this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     this.ctx.fill();
   }
 
@@ -49,8 +37,23 @@ export class GameRenderer {
     balls: readonly Ball[],
     currentPlayerIdentity: Identity | undefined
   ) {
+    // Clear the physical screen
     this.clear();
-    this.drawCenter();
+
+    // Find the current player to center the camera on
+    const currentPlayer = players.find(p => 
+      currentPlayerIdentity?.isEqual(p.id) ?? false
+    );
+
+    // Save the default canvas state
+    this.ctx.save();
+
+    // Apply camera translation to center on current player
+    if (currentPlayer) {
+      const cameraOffsetX = (this.canvasWidth / 2) - currentPlayer.x;
+      const cameraOffsetY = (this.canvasHeight / 2) - currentPlayer.y;
+      this.ctx.translate(cameraOffsetX, cameraOffsetY);
+    }
 
     // Draw all players using PlayerRenderer
     this.playerRenderer.drawAll(players, currentPlayerIdentity);
@@ -59,5 +62,10 @@ export class GameRenderer {
     balls.forEach(ball => {
       this.drawBall(ball);
     });
+
+    // Restore canvas state (anything drawn after this won't move with camera)
+    this.ctx.restore();
+    
+    // UI elements that should be pinned to screen would go here
   }
 }

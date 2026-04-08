@@ -2,7 +2,7 @@ using SpacetimeDB;
 
 public static partial class Module
 {
-        [SpacetimeDB.Table(Accessor = "Player", Public = true)]
+    [SpacetimeDB.Table(Accessor = "Player", Public = true)]
     public partial struct Player
     {
         [SpacetimeDB.PrimaryKey]
@@ -10,8 +10,15 @@ public static partial class Module
         public float X;
         public float Y;
         public string Name;
+
         public float AimAngle; // Player aim angle in radians (0 to 2π)
-        public float PaddleSize;  // Size of the paddle arc
+
+        public float PaddleSize;  // Size of the paddle arc in radians
+
+        [SpacetimeDB.Default(30u)]
+        public int PaddleRadius;
+        [SpacetimeDB.Default(15f)]
+        public float PlayerRadius; // Radius of the player circle
     }
 
     [SpacetimeDB.Reducer]
@@ -32,8 +39,9 @@ public static partial class Module
             X = MathF.Cos(randomAngle),
             Y = MathF.Sin(randomAngle),
             Name = playerName,
-            AimAngle = 0,
-            PaddleSize = 0.5f  // Default paddle size
+            AimAngle = randomAngle,
+            PaddleSize = MathF.PI / 4, // 45 degree paddle arc
+            PaddleRadius = 30
         });
 
         Log.Info($"Player {playerName} joined at angle {randomAngle}");
