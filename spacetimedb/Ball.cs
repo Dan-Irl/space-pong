@@ -29,7 +29,7 @@ public static partial class Module
         }
 
         // Calculate ball velocity based on player's aim angle
-        const float speed = 2.0f;
+        const float speed = 250.0f;
         var velocityX = MathF.Cos(player.AimAngle) * speed;
         var velocityY = MathF.Sin(player.AimAngle) * speed;
 
@@ -41,7 +41,7 @@ public static partial class Module
             Y = player.Y,
             VelocityX = velocityX,
             VelocityY = velocityY,
-            Radius = 0.1f,
+            Radius = 10f,
             CreatedAt = ctx.Timestamp,
             ScheduledAt = new ScheduleAt.Interval(_gametick)
         });
@@ -64,10 +64,8 @@ public static partial class Module
             return;
         }
 
-        // Update ball position based on velocity (100ms delta)
-        var deltaTime = 0.1f; // 100ms in seconds
-        var newX = ball.X + ball.VelocityX * deltaTime;
-        var newY = ball.Y + ball.VelocityY * deltaTime;
+        var newX = ball.X + ball.VelocityX * _gametick.Microseconds / 1_000_000.0f;
+        var newY = ball.Y + ball.VelocityY * _gametick.Microseconds / 1_000_000.0f;
 
         // Update ball position (interval continues automatically)
         ctx.Db.Ball.Id.Update(ball with 
