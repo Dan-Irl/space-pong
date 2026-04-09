@@ -32,12 +32,12 @@ public static partial class Module
 
         var randomAngle = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
 
-        // Insert new player
+        // Insert new player at random position (centered coordinate system: -500 to 500)
         ctx.Db.Player.Insert(new Player
         {
             Id = ctx.Sender,
-            X = MathF.Cos(randomAngle),
-            Y = MathF.Sin(randomAngle),
+            X = (ctx.Rng.NextSingle() - 0.5f) * ctx.Db.GameSettings.Iter().FirstOrDefault().WorldWidth, // -500 to 500
+            Y = (ctx.Rng.NextSingle() - 0.5f) * ctx.Db.GameSettings.Iter().FirstOrDefault().WorldHeight, // -500 to 500
             Name = playerName,
             AimAngle = randomAngle,
             PaddleSize = MathF.PI / 4, // 45 degree paddle arc

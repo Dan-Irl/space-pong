@@ -18,9 +18,24 @@ export const Ball = __t.object("Ball", {
   velocityY: __t.f32(),
   radius: __t.f32(),
   createdAt: __t.timestamp(),
-  scheduledAt: __t.scheduleAt(),
 });
 export type Ball = __Infer<typeof Ball>;
+
+export const GameSettings = __t.object("GameSettings", {
+  id: __t.u64(),
+  worldWidth: __t.f32(),
+  worldHeight: __t.f32(),
+  ballSpeed: __t.f32(),
+  ballRadius: __t.f32(),
+  ballLifetimeSeconds: __t.f32(),
+});
+export type GameSettings = __Infer<typeof GameSettings>;
+
+export const GameTick = __t.object("GameTick", {
+  id: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+});
+export type GameTick = __Infer<typeof GameTick>;
 
 export const Player = __t.object("Player", {
   id: __t.identity(),
