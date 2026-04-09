@@ -2,7 +2,7 @@ using SpacetimeDB;
 
 public static partial class Module
 {
-    [SpacetimeDB.Table(Accessor = "Ball", Public = true, Scheduled = nameof(UpdateBall), ScheduledAt = nameof(ScheduledAt))]
+    [SpacetimeDB.Table(Accessor = "Ball", Public = true)]
     public partial struct Ball
     {
         [SpacetimeDB.PrimaryKey]
@@ -15,7 +15,6 @@ public static partial class Module
         public float VelocityY;
         public float Radius;
         public Timestamp CreatedAt;
-        public ScheduleAt ScheduledAt;
     }
     
 
@@ -42,37 +41,10 @@ public static partial class Module
             VelocityX = velocityX,
             VelocityY = velocityY,
             Radius = 10f,
-            CreatedAt = ctx.Timestamp,
-            ScheduledAt = new ScheduleAt.Interval(_gametick)
+            CreatedAt = ctx.Timestamp
         });
 
         Log.Info($"Ball {ball.Id} spawned by {player.Name}");
-    }
-
-    [SpacetimeDB.Reducer]
-    public static void UpdateBall(ReducerContext ctx, Ball ball)
-    {
-        // Calculate how long the ball has been alive
-        TimeDuration lifetime = ctx.Timestamp.TimeDurationSince(ball.CreatedAt);
-        
-        // Check if ball should despawn (after 5 seconds)
-        if (lifetime.Microseconds >= 5_000_000)
-        {
-            // Delete the ball to stop the interval
-            ctx.Db.Ball.Id.Delete(ball.Id);
-            Log.Info($"Ball {ball.Id} despawned after {lifetime.Microseconds / 1000000.0:F1} seconds");
-            return;
-        }
-
-        var newX = ball.X + ball.VelocityX * _gametick.Microseconds / 1_000_000.0f;
-        var newY = ball.Y + ball.VelocityY * _gametick.Microseconds / 1_000_000.0f;
-
-        // Update ball position (interval continues automatically)
-        ctx.Db.Ball.Id.Update(ball with 
-        { 
-            X = newX, 
-            Y = newY
-        });
     }
 
     

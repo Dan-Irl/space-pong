@@ -43,6 +43,8 @@ import SpawnBallReducer from "./spawn_ball_reducer";
 
 // Import all table schema definitions
 import BallRow from "./ball_table";
+import GameSettingsRow from "./game_settings_table";
+import GameTickRow from "./game_tick_table";
 import PlayerRow from "./player_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -60,6 +62,28 @@ const tablesSchema = __schema({
       { name: 'ball_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, BallRow),
+  GameSettings: __table({
+    name: 'game_settings',
+    indexes: [
+      { accessor: 'Id', name: 'game_settings_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'game_settings_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, GameSettingsRow),
+  GameTick: __table({
+    name: 'game_tick',
+    indexes: [
+      { accessor: 'Id', name: 'game_tick_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'game_tick_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, GameTickRow),
   Player: __table({
     name: 'player',
     indexes: [

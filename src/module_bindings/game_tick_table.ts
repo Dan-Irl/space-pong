@@ -12,10 +12,5 @@ import {
 
 export default __t.row({
   id: __t.u64().primaryKey(),
-  x: __t.f32(),
-  y: __t.f32(),
-  velocityX: __t.f32().name("velocity_x"),
-  velocityY: __t.f32().name("velocity_y"),
-  radius: __t.f32(),
-  createdAt: __t.timestamp().name("created_at"),
+  scheduledAt: __t.scheduleAt().name("scheduled_at"),
 });
