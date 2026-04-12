@@ -12,8 +12,14 @@ public static partial class Module
         public string Name;
 
         public float AimAngle; // Player aim angle in radians (0 to 2π)
+        // In Player.cs
+        public readonly float PaddleAngle => AimAngle + MathF.PI;
 
-        public float PaddleSize;  // Size of the paddle arc in radians
+
+        ///<summary>
+        /// Angle that defines the size of the paddle arc
+        /// </summary>
+        public float PaddleArcAngle;
 
         [SpacetimeDB.Default(30u)]
         public int PaddleRadius;
@@ -40,7 +46,7 @@ public static partial class Module
             Y = (ctx.Rng.NextSingle() - 0.5f) * ctx.Db.GameSettings.Iter().FirstOrDefault().WorldHeight, // -500 to 500
             Name = playerName,
             AimAngle = randomAngle,
-            PaddleSize = MathF.PI / 4, // 45 degree paddle arc
+            PaddleArcAngle = MathF.PI / 4, // 45 degree paddle arc
             PaddleRadius = 30
         });
 
