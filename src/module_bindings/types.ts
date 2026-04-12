@@ -43,7 +43,7 @@ export const Player = __t.object("Player", {
   y: __t.f32(),
   name: __t.string(),
   aimAngle: __t.f32(),
-  paddleSize: __t.f32(),
+  paddleArcAngle: __t.f32(),
   paddleRadius: __t.i32(),
   playerRadius: __t.f32(),
 });
