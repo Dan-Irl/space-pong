@@ -11,10 +11,10 @@ public static partial class Module
         // Fetch all data once
         var balls = ctx.Db.Ball.Iter().ToList();
         var players = ctx.Db.Player.Iter().ToList();
-        
+
         // Update all balls
         UpdateAllBalls(ctx, balls);
-        
+
         // Check collisions
         CheckCollisions(ctx, balls, players);
     }
@@ -25,7 +25,7 @@ public static partial class Module
         {
             // Calculate how long the ball has been alive
             TimeDuration lifetime = ctx.Timestamp.TimeDurationSince(ball.CreatedAt);
-            
+
             // Check if ball should despawn (after 5 seconds)
             if (lifetime.Microseconds >= 5_000_000)
             {
@@ -39,9 +39,9 @@ public static partial class Module
             var newY = ball.Y + ball.VelocityY * _gametick.Microseconds / 1_000_000.0f;
 
             // Update ball position in database
-            ctx.Db.Ball.Id.Update(ball with 
-            { 
-                X = newX, 
+            ctx.Db.Ball.Id.Update(ball with
+            {
+                X = newX,
                 Y = newY
             });
         }
@@ -58,29 +58,35 @@ public static partial class Module
                 bool collision = GamePhysics.CheckBallPaddleCollision(
                     ball.X, ball.Y, ball.Radius,
                     player.X, player.Y, player.PlayerRadius, player.PaddleRadius,
-                    player.AimAngle, player.PaddleSize
+                    player.PaddleAngle, player.PaddleArcAngle
                 );
 
                 if (collision)
                 {
-                    // Calculate reflected velocity
-                    var (newVx, newVy) = GamePhysics.ReflectVelocity(
+                    // Calculate reflected velocity (only if ball is moving towards paddle)
+                    var reflection = GamePhysics.ReflectVelocity(
                         ball.VelocityX, ball.VelocityY,
                         ball.X, ball.Y,
                         player.X, player.Y
                     );
 
-                    // Update ball with new velocity
-                    ctx.Db.Ball.Id.Update(ball with
+                    // Only update if reflection was calculated (ball was moving towards paddle)
+                    if (reflection.HasValue)
                     {
-                        VelocityX = newVx,
-                        VelocityY = newVy
-                    });
+                        var (newVx, newVy) = reflection.Value;
 
-                    Log.Info($"Ball {ball.Id} reflected by {player.Name}");
-                    
-                    // Only reflect once per tick to avoid multiple collisions
-                    break;
+                        // Update ball with new velocity
+                        ctx.Db.Ball.Id.Update(ball with
+                        {
+                            VelocityX = newVx,
+                            VelocityY = newVy
+                        });
+
+                        Log.Info($"Ball {ball.Id} reflected by {player.Name}");
+
+                        // Only reflect once per tick to avoid multiple collisions
+                        break;
+                    }
                 }
             }
         }
