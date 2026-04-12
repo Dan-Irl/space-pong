@@ -12,21 +12,17 @@ public static partial class Module
         public string Name;
 
         public float AimAngle; // Player aim angle in radians (0 to 2π)
-        // In Player.cs
-        public readonly float PaddleAngle => AimAngle + MathF.PI;
+        public readonly float PaddleAngle => AimAngle + MathF.PI; // Convenience property for paddle angle
 
-        public float VelocityX; // Player velocity in X direction
-        public float VelocityY; // Player velocity in Y direction
+        public float VelocityX;
+        public float VelocityY;
 
-        ///<summary>
-        /// Angle that defines the size of the paddle arc
-        /// </summary>
-        public float PaddleArcAngle;
-
-        [SpacetimeDB.Default(30u)]
-        public int PaddleRadius;
         [SpacetimeDB.Default(15f)]
         public float PlayerRadius; // Radius of the player circle
+
+        // Helper properties for physics (not serialized by SpacetimeDB)
+        public readonly Shape Shape => Shape.Circle(PlayerRadius);
+        public readonly bool IsStatic => false; // Players are dynamic (can move)
     }
 
     [SpacetimeDB.Reducer]
@@ -39,19 +35,33 @@ public static partial class Module
         }
 
         var randomAngle = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
+        var startX = (ctx.Rng.NextSingle() - 0.5f) * ctx.Db.GameSettings.Iter().FirstOrDefault().WorldWidth;
+        var startY = (ctx.Rng.NextSingle() - 0.5f) * ctx.Db.GameSettings.Iter().FirstOrDefault().WorldHeight;
 
         // Insert new player at random position (centered coordinate system: -500 to 500)
         ctx.Db.Player.Insert(new Player
         {
             Id = ctx.Sender,
-            X = (ctx.Rng.NextSingle() - 0.5f) * ctx.Db.GameSettings.Iter().FirstOrDefault().WorldWidth, // -500 to 500
-            Y = (ctx.Rng.NextSingle() - 0.5f) * ctx.Db.GameSettings.Iter().FirstOrDefault().WorldHeight, // -500 to 500
+            X = startX,
+            Y = startY,
             Name = playerName,
             AimAngle = randomAngle,
-            PaddleArcAngle = MathF.PI / 4, // 45 degree paddle arc
-            PaddleRadius = 30,
             VelocityX = 0,
             VelocityY = 0
+        });
+
+        // Create paddle for the player
+        ctx.Db.Paddle.Insert(new Paddle
+        {
+            PlayerId = ctx.Sender,
+            X = startX,
+            Y = startY,
+            VelocityX = 0,
+            VelocityY = 0,
+            Angle = randomAngle + MathF.PI, // Paddle faces opposite of aim
+            ArcAngle = MathF.PI / 4, // 45 degree paddle arc
+            InnerRadius = 0,
+            OuterRadius = 30
         });
 
         Log.Info($"Player {playerName} joined at angle {randomAngle}");
@@ -64,6 +74,12 @@ public static partial class Module
         if (ctx.Db.Player.Id.Find(ctx.Sender) == null)
         {
             throw new InvalidOperationException("Player not in game");
+        }
+
+        // Remove player's paddle first
+        if (ctx.Db.Paddle.PlayerId.Find(ctx.Sender) is Paddle paddle)
+        {
+            ctx.Db.Paddle.PlayerId.Delete(ctx.Sender);
         }
 
         // Remove player from game

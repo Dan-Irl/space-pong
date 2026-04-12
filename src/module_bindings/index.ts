@@ -45,6 +45,7 @@ import SpawnBallReducer from "./spawn_ball_reducer";
 import BallRow from "./ball_table";
 import GameSettingsRow from "./game_settings_table";
 import GameTickRow from "./game_tick_table";
+import PaddleRow from "./paddle_table";
 import PlayerRow from "./player_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -84,6 +85,17 @@ const tablesSchema = __schema({
       { name: 'game_tick_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, GameTickRow),
+  Paddle: __table({
+    name: 'paddle',
+    indexes: [
+      { accessor: 'PlayerId', name: 'paddle_player_id_idx_btree', algorithm: 'btree', columns: [
+        'playerId',
+      ] },
+    ],
+    constraints: [
+      { name: 'paddle_player_id_key', constraint: 'unique', columns: ['playerId'] },
+    ],
+  }, PaddleRow),
   Player: __table({
     name: 'player',
     indexes: [

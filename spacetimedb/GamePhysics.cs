@@ -1,12 +1,150 @@
 using System;
+using SpacetimeDB;
 
 public static partial class Module
 {
+    /// <summary>
+    /// Represents a geometric shape for collision detection
+    /// </summary>
+    public readonly struct Shape
+    {
+        public enum ShapeType { Circle, CircularArc }
+
+        public ShapeType Type { get; init; }
+
+        // Circle properties
+        public float Radius { get; init; }
+
+        // CircularArc properties
+        public float InnerRadius { get; init; }
+        public float OuterRadius { get; init; }
+        public float Angle { get; init; } // Center angle of the arc in radians
+        public float ArcAngle { get; init; } // Angular width of the arc in radians
+
+        public static Shape Circle(float radius) => new Shape
+        {
+            Type = ShapeType.Circle,
+            Radius = radius
+        };
+
+        public static Shape CircularArc(float innerRadius, float outerRadius, float angle, float arcAngle) => new Shape
+        {
+            Type = ShapeType.CircularArc,
+            InnerRadius = innerRadius,
+            OuterRadius = outerRadius,
+            Angle = angle,
+            ArcAngle = arcAngle
+        };
+    }
+
+    /// <summary>
+    /// Records a collision event between two physics objects.
+    /// Generic to support any types (no interface constraint due to SpacetimeDB limitations).
+    /// </summary>
+    public readonly struct CollisionEvent<TA, TB>
+    {
+        public TA ObjectA { get; init; }
+        public TB ObjectB { get; init; }
+    }
+
     /// <summary>
     /// Pure physics math functions for collision detection
     /// </summary>
     public static class GamePhysics
     {
+        /// <summary>
+        /// Pure geometry check: does circle A overlap circle B?
+        /// </summary>
+        public static bool CheckCircleOverlap(
+            float aX, float aY, float aRadius,
+            float bX, float bY, float bRadius)
+        {
+            float dx = bX - aX;
+            float dy = bY - aY;
+            float distanceSquared = dx * dx + dy * dy;
+            float combinedRadius = aRadius + bRadius;
+
+            return distanceSquared <= combinedRadius * combinedRadius;
+        }
+
+        /// <summary>
+        /// Pure geometry check: does a circle overlap with a circular arc?
+        /// </summary>
+        public static bool CheckCircleArcOverlap(
+            float circleX, float circleY, float circleRadius,
+            float arcX, float arcY, float arcInnerRadius, float arcOuterRadius, float arcAngle, float arcArcAngle)
+        {
+            // Calculate distance between circle center and arc center
+            float dx = circleX - arcX;
+            float dy = circleY - arcY;
+            float distanceSquared = dx * dx + dy * dy;
+
+            // Check if circle is within arc radius range
+            float outerRadius = arcOuterRadius + circleRadius;
+            float innerRadius = MathF.Max(0, arcInnerRadius - circleRadius);
+
+            if (distanceSquared > outerRadius * outerRadius || distanceSquared < innerRadius * innerRadius)
+            {
+                return false; // Not in arc radius range
+            }
+
+            // Calculate angle from arc center to circle
+            float angleToCircle = MathF.Atan2(dy, dx);
+
+            // Normalize angle to 0-2π range
+            if (angleToCircle < 0)
+            {
+                angleToCircle += MathF.PI * 2;
+            }
+
+            // Check if circle angle is within arc
+            float arcStart = arcAngle - arcArcAngle / 2;
+            float arcEnd = arcAngle + arcArcAngle / 2;
+
+            // Normalize arc angles
+            arcStart = NormalizeAngle(arcStart);
+            arcEnd = NormalizeAngle(arcEnd);
+
+            // Check if angle is within arc
+            return IsAngleInArc(angleToCircle, arcStart, arcEnd);
+        }
+
+        /// <summary>
+        /// Universal shape overlap check
+        /// </summary>
+        public static bool CheckShapeOverlap(
+            Shape shapeA, float aX, float aY,
+            Shape shapeB, float bX, float bY)
+        {
+            // Circle vs Circle
+            if (shapeA.Type == Shape.ShapeType.Circle && shapeB.Type == Shape.ShapeType.Circle)
+            {
+                return CheckCircleOverlap(aX, aY, shapeA.Radius, bX, bY, shapeB.Radius);
+            }
+
+            // Circle vs CircularArc (order matters for parameters)
+            if (shapeA.Type == Shape.ShapeType.Circle && shapeB.Type == Shape.ShapeType.CircularArc)
+            {
+                return CheckCircleArcOverlap(
+                    aX, aY, shapeA.Radius,
+                    bX, bY, shapeB.InnerRadius, shapeB.OuterRadius, shapeB.Angle, shapeB.ArcAngle
+                );
+            }
+
+            // CircularArc vs Circle (swap order)
+            if (shapeA.Type == Shape.ShapeType.CircularArc && shapeB.Type == Shape.ShapeType.Circle)
+            {
+                return CheckCircleArcOverlap(
+                    bX, bY, shapeB.Radius,
+                    aX, aY, shapeA.InnerRadius, shapeA.OuterRadius, shapeA.Angle, shapeA.ArcAngle
+                );
+            }
+
+            // CircularArc vs CircularArc (not implemented, probably won't need it)
+            // For now, return false
+            return false;
+        }
+
         /// <summary>
         /// Check if a ball (circle) collides with a player's paddle (arc on a circle)
         /// </summary>

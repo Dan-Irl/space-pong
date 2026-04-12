@@ -11,16 +11,20 @@ public static partial class Module
         // Fetch all data once
         var balls = ctx.Db.Ball.Iter().ToList();
         var players = ctx.Db.Player.Iter().ToList();
+        var paddles = ctx.Db.Paddle.Iter().ToList();
         var gameSettings = ctx.Db.GameSettings.Iter().FirstOrDefault();
 
         // Update all players
         UpdateAllPlayers(ctx, players, gameSettings);
 
+        // Update all paddles (must happen after players so they follow)
+        UpdateAllPaddles(ctx, paddles, players);
+
         // Update all balls
         UpdateAllBalls(ctx, balls, gameSettings);
 
         // Check collisions
-        CheckCollisions(ctx, balls, players);
+        CheckCollisions(ctx, balls, paddles, players);
     }
 
     private static void UpdateAllPlayers(ReducerContext ctx, List<Player> players, GameSettings gameSettings)
@@ -44,6 +48,31 @@ public static partial class Module
                 Y = correctedY,
                 VelocityX = correctedVx,
                 VelocityY = correctedVy
+            });
+        }
+    }
+
+    private static void UpdateAllPaddles(ReducerContext ctx, List<Paddle> paddles, List<Player> players)
+    {
+        foreach (var paddle in paddles)
+        {
+            // Find the parent player
+            var player = players.FirstOrDefault(p => p.Id.Equals(paddle.PlayerId));
+            if (player.Equals(default(Player)))
+            {
+                // Player doesn't exist, delete orphaned paddle
+                ctx.Db.Paddle.PlayerId.Delete(paddle.PlayerId);
+                continue;
+            }
+
+            // Sync paddle with player position, velocity, and angle
+            ctx.Db.Paddle.PlayerId.Update(paddle with
+            {
+                X = player.X,
+                Y = player.Y,
+                VelocityX = player.VelocityX,
+                VelocityY = player.VelocityY,
+                Angle = player.PaddleAngle // Paddle faces opposite of aim
             });
         }
     }
@@ -84,75 +113,129 @@ public static partial class Module
         }
     }
 
-    private static void CheckCollisions(ReducerContext ctx, List<Ball> balls, List<Player> players)
+    private static void CheckCollisions(ReducerContext ctx, List<Ball> balls, List<Paddle> paddles, List<Player> players)
     {
-        // Check collisions between all balls and all players
+        // PHASE 1: Detect all collisions (pure geometry - iterate directly over entities)
+        var ballPaddleCollisions = new List<CollisionEvent<Ball, Paddle>>();
+        var ballPlayerCollisions = new List<CollisionEvent<Ball, Player>>();
+
         foreach (var ball in balls)
         {
+            // Check Ball vs Paddle collisions
+            foreach (var paddle in paddles)
+            {
+                if (GamePhysics.CheckShapeOverlap(ball.Shape, ball.X, ball.Y, paddle.Shape, paddle.X, paddle.Y))
+                {
+                    ballPaddleCollisions.Add(new CollisionEvent<Ball, Paddle>
+                    {
+                        ObjectA = ball,
+                        ObjectB = paddle
+                    });
+                }
+            }
+
+            // Check Ball vs Player collisions (ball hitting player body, not paddle)
             foreach (var player in players)
             {
-                // Check if ball collides with player's paddle
-                bool collision = GamePhysics.CheckBallPaddleCollision(
-                    ball.X, ball.Y, ball.Radius,
-                    player.X, player.Y, player.PlayerRadius, player.PaddleRadius,
-                    player.PaddleAngle, player.PaddleArcAngle
-                );
-
-                if (collision)
+                if (GamePhysics.CheckShapeOverlap(ball.Shape, ball.X, ball.Y, player.Shape, player.X, player.Y))
                 {
-                    // Calculate reflected velocity (only if ball is moving towards paddle)
-                    var reflection = GamePhysics.ReflectVelocity(
-                        ball.VelocityX, ball.VelocityY,
-                        ball.X, ball.Y,
-                        player.X, player.Y
-                    );
-
-                    // Only update if reflection was calculated (ball was moving towards paddle)
-                    if (reflection.HasValue)
+                    ballPlayerCollisions.Add(new CollisionEvent<Ball, Player>
                     {
-                        var (newVx, newVy) = reflection.Value;
-
-                        // Calculate momentum transfer to player
-                        // Normal vector from player to ball
-                        float dx = ball.X - player.X;
-                        float dy = ball.Y - player.Y;
-                        float length = MathF.Sqrt(dx * dx + dy * dy);
-
-                        if (length > 0.0001f)
-                        {
-                            float normalX = dx / length;
-                            float normalY = dy / length;
-
-                            // Calculate the impact force (velocity component towards player before reflection)
-                            float dotProduct = ball.VelocityX * normalX + ball.VelocityY * normalY;
-
-                            // Transfer a small portion of the impact momentum to the player
-                            const float momentumTransferFactor = 0.15f; // 15% of impact momentum
-                            float playerVelocityDeltaX = normalX * MathF.Abs(dotProduct) * momentumTransferFactor;
-                            float playerVelocityDeltaY = normalY * MathF.Abs(dotProduct) * momentumTransferFactor;
-
-                            // Update player velocity
-                            ctx.Db.Player.Id.Update(player with
-                            {
-                                VelocityX = player.VelocityX + playerVelocityDeltaX,
-                                VelocityY = player.VelocityY + playerVelocityDeltaY
-                            });
-                        }
-
-                        // Update ball with new velocity
-                        ctx.Db.Ball.Id.Update(ball with
-                        {
-                            VelocityX = newVx,
-                            VelocityY = newVy
-                        });
-
-                        Log.Info($"Ball {ball.Id} reflected by {player.Name}");
-
-                        // Only reflect once per tick to avoid multiple collisions
-                        break;
-                    }
+                        ObjectA = ball,
+                        ObjectB = player
+                    });
                 }
             }
         }
+
+        // Future: Check Ball vs PowerUp, Player vs Asteroid, etc.
+        // Just add more collision lists for different entity type combinations
+
+        // PHASE 2: Handle collisions based on entity types (game logic)
+        foreach (var evt in ballPaddleCollisions)
+        {
+            HandleBallPaddleCollision(ctx, evt.ObjectA, evt.ObjectB);
+        }
+
+        foreach (var evt in ballPlayerCollisions)
+        {
+            HandleBallPlayerCollision(ctx, evt.ObjectA, evt.ObjectB);
+        }
+
+        // Future: Add more collision handlers here
+        // foreach (var evt in ballPowerUpCollisions) { HandleBallPowerUpCollision(...); }
+        // foreach (var evt in playerAsteroidCollisions) { HandlePlayerAsteroidCollision(...); }
+    }
+
+    /// <summary>
+    /// Handle collision between ball and paddle (reflects ball and transfers momentum to player)
+    /// </summary>
+    private static void HandleBallPaddleCollision(ReducerContext ctx, Ball ball, Paddle paddle)
+    {
+        // Calculate reflected velocity (only if ball is moving towards paddle)
+        var reflection = GamePhysics.ReflectVelocity(
+            ball.VelocityX, ball.VelocityY,
+            ball.X, ball.Y,
+            paddle.X, paddle.Y
+        );
+
+        // Only update if reflection was calculated (ball was moving towards paddle)
+        if (!reflection.HasValue)
+        {
+            return; // Ball moving away from paddle
+        }
+
+        var (newVx, newVy) = reflection.Value;
+
+        // Find the player who owns this paddle
+        if (ctx.Db.Player.Id.Find(paddle.PlayerId) is Player player)
+        {
+            // Calculate momentum transfer to player
+            float dx = ball.X - paddle.X;
+            float dy = ball.Y - paddle.Y;
+            float length = MathF.Sqrt(dx * dx + dy * dy);
+
+            if (length > 0.0001f)
+            {
+                float normalX = dx / length;
+                float normalY = dy / length;
+
+                // Calculate the impact force
+                float dotProduct = ball.VelocityX * normalX + ball.VelocityY * normalY;
+
+                // Transfer momentum to player
+                const float momentumTransferFactor = 0.15f;
+                float playerVelocityDeltaX = normalX * MathF.Abs(dotProduct) * momentumTransferFactor;
+                float playerVelocityDeltaY = normalY * MathF.Abs(dotProduct) * momentumTransferFactor;
+
+                // Update player velocity
+                ctx.Db.Player.Id.Update(player with
+                {
+                    VelocityX = player.VelocityX + playerVelocityDeltaX,
+                    VelocityY = player.VelocityY + playerVelocityDeltaY
+                });
+            }
+
+            Log.Info($"Ball {ball.Id} reflected by {player.Name}'s paddle");
+        }
+
+        // Update ball with new velocity
+        ctx.Db.Ball.Id.Update(ball with
+        {
+            VelocityX = newVx,
+            VelocityY = newVy
+        });
+    }
+
+    /// <summary>
+    /// Handle collision between ball and player body (not paddle)
+    /// For now, just log it - could be used for scoring/damage in the future
+    /// </summary>
+    private static void HandleBallPlayerCollision(ReducerContext ctx, Ball ball, Player player)
+    {
+        // Ball hit the player body, not the paddle
+        // This could mean the player missed the ball
+        // For now, just log it - in a real game, might deduct points or health
+        Log.Info($"Ball {ball.Id} hit {player.Name} (missed paddle)");
     }
 }

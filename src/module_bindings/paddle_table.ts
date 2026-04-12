@@ -11,7 +11,9 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  id: __t.u64().primaryKey(),
-  radius: __t.f32(),
-  createdAt: __t.timestamp().name("created_at"),
+  playerId: __t.identity().primaryKey().name("player_id"),
+  angle: __t.f32(),
+  arcAngle: __t.f32().name("arc_angle"),
+  innerRadius: __t.f32().name("inner_radius"),
+  outerRadius: __t.f32().name("outer_radius"),
 });
