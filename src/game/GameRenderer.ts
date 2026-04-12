@@ -1,11 +1,14 @@
 import type { Infer } from 'spacetimedb';
 import type PlayerRow from '../module_bindings/player_table';
+import type PaddleRow from '../module_bindings/paddle_table';
 import type BallRow from '../module_bindings/ball_table';
 import type GameSettingsRow from '../module_bindings/game_settings_table';
 import type { Identity } from 'spacetimedb';
 import { PlayerRenderer } from './PlayerRenderer';
+import { PaddleRenderer } from './PaddleRenderer';
 
 type Player = Infer<typeof PlayerRow>;
+type Paddle = Infer<typeof PaddleRow>;
 type Ball = Infer<typeof BallRow>;
 type GameSettings = Infer<typeof GameSettingsRow>;
 
@@ -14,6 +17,7 @@ export class GameRenderer {
   private canvasWidth: number;
   private canvasHeight: number;
   private playerRenderer: PlayerRenderer;
+  private paddleRenderer: PaddleRenderer;
   private worldWidth: number = 1000;
   private worldHeight: number = 1000;
 
@@ -22,6 +26,7 @@ export class GameRenderer {
     this.canvasWidth = width;
     this.canvasHeight = height;
     this.playerRenderer = new PlayerRenderer(ctx);
+    this.paddleRenderer = new PaddleRenderer(ctx);
   }
 
   updateWorldSize(gameSettings: GameSettings | undefined) {
@@ -45,6 +50,7 @@ export class GameRenderer {
 
   renderFrame(
     players: readonly Player[],
+    paddles: readonly Paddle[],
     balls: readonly Ball[],
     currentPlayerIdentity: Identity | undefined
   ) {
@@ -71,6 +77,9 @@ export class GameRenderer {
 
     // Draw all players using PlayerRenderer
     this.playerRenderer.drawAll(players, currentPlayerIdentity);
+
+    // Draw all paddles using PaddleRenderer
+    this.paddleRenderer.drawAll(paddles, currentPlayerIdentity);
 
     // Draw all balls
     balls.forEach(ball => {

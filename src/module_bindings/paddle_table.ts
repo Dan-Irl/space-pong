@@ -12,6 +12,10 @@ import {
 
 export default __t.row({
   playerId: __t.identity().primaryKey().name("player_id"),
+  x: __t.f32(),
+  y: __t.f32(),
+  velocityX: __t.f32().name("velocity_x"),
+  velocityY: __t.f32().name("velocity_y"),
   angle: __t.f32(),
   arcAngle: __t.f32().name("arc_angle"),
   innerRadius: __t.f32().name("inner_radius"),

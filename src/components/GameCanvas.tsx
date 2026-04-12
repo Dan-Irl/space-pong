@@ -2,10 +2,11 @@ import { useRef, useEffect } from "react";
 import { GameRenderer } from "../game/GameRenderer";
 import { useGameInput } from "../game/useGameInput";
 import type { Identity } from "spacetimedb";
-import type { Ball, Player, GameSettings } from "../module_bindings/types";
+import type { Ball, Player, Paddle, GameSettings } from "../module_bindings/types";
 
 interface GameCanvasProps {
   players: readonly Player[];
+  paddles: readonly Paddle[];
   balls: readonly Ball[];
   gameSettings: GameSettings | undefined;
   identity: Identity | undefined;
@@ -18,6 +19,7 @@ interface GameCanvasProps {
 
 export function GameCanvas({
   players,
+  paddles,
   balls,
   gameSettings,
   identity,
@@ -50,8 +52,8 @@ export function GameCanvas({
     rendererRef.current.updateWorldSize(gameSettings);
 
     // Render the frame
-    rendererRef.current.renderFrame(players, balls, identity);
-  }, [players, balls, identity, gameSettings]);
+    rendererRef.current.renderFrame(players, paddles, balls, identity);
+  }, [players, paddles, balls, identity, gameSettings]);
 
   return <canvas ref={canvasRef} width={width} height={height} />;
 }

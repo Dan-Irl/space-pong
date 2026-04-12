@@ -15,7 +15,6 @@ export class PlayerRenderer {
     const color = isCurrentPlayer ? '#00ff00' : '#0088ff';
 
     this.drawPlayerCircle(player, color);
-    this.drawPaddleArc(player, color);
 
     if (isCurrentPlayer) {
       this.drawAimLine(player);
@@ -29,22 +28,6 @@ export class PlayerRenderer {
     this.ctx.beginPath();
     this.ctx.arc(player.x, player.y, player.playerRadius, 0, Math.PI * 2);
     this.ctx.fill();
-  }
-
-  private drawPaddleArc(player: Player, color: string) {
-    const paddleCenterAngle = player.aimAngle + Math.PI; // 180 degrees from aim angle
-
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 5;
-    this.ctx.beginPath();
-    this.ctx.arc(
-      player.x,
-      player.y,
-      player.paddleRadius,
-      paddleCenterAngle - player.paddleArcAngle / 2,
-      paddleCenterAngle + player.paddleArcAngle / 2
-    );
-    this.ctx.stroke();
   }
 
   private drawAimLine(player: Player) {

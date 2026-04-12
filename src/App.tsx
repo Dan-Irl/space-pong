@@ -15,6 +15,7 @@ function App() {
 
   // Subscribe to all players, balls, and game settings
   const [players] = useTable(tables.Player);
+  const [paddles] = useTable(tables.Paddle);
   const [balls] = useTable(tables.Ball);
   const [gameSettings] = useTable(tables.GameSettings);
 
@@ -87,6 +88,7 @@ function App() {
       </div>
       <GameCanvas
         players={players}
+        paddles={paddles}
         balls={balls}
         gameSettings={currentGameSettings}
         identity={identity}

@@ -12,7 +12,11 @@ import {
 
 export default __t.row({
   id: __t.identity().primaryKey(),
+  x: __t.f32(),
+  y: __t.f32(),
   name: __t.string(),
   aimAngle: __t.f32().name("aim_angle"),
+  velocityX: __t.f32().name("velocity_x"),
+  velocityY: __t.f32().name("velocity_y"),
   playerRadius: __t.f32().name("player_radius"),
 });

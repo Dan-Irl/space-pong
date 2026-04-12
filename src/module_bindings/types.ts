@@ -12,6 +12,10 @@ import {
 
 export const Ball = __t.object("Ball", {
   id: __t.u64(),
+  x: __t.f32(),
+  y: __t.f32(),
+  velocityX: __t.f32(),
+  velocityY: __t.f32(),
   radius: __t.f32(),
   createdAt: __t.timestamp(),
 });
@@ -35,6 +39,10 @@ export type GameTick = __Infer<typeof GameTick>;
 
 export const Paddle = __t.object("Paddle", {
   playerId: __t.identity(),
+  x: __t.f32(),
+  y: __t.f32(),
+  velocityX: __t.f32(),
+  velocityY: __t.f32(),
   angle: __t.f32(),
   arcAngle: __t.f32(),
   innerRadius: __t.f32(),
@@ -44,8 +52,12 @@ export type Paddle = __Infer<typeof Paddle>;
 
 export const Player = __t.object("Player", {
   id: __t.identity(),
+  x: __t.f32(),
+  y: __t.f32(),
   name: __t.string(),
   aimAngle: __t.f32(),
+  velocityX: __t.f32(),
+  velocityY: __t.f32(),
   playerRadius: __t.f32(),
 });
 export type Player = __Infer<typeof Player>;
