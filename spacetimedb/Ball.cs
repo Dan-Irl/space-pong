@@ -8,7 +8,7 @@ public static partial class Module
         [SpacetimeDB.PrimaryKey]
         [SpacetimeDB.AutoInc]
         public ulong Id;
-        
+
         public float X;
         public float Y;
         public float VelocityX;
@@ -16,7 +16,7 @@ public static partial class Module
         public float Radius;
         public Timestamp CreatedAt;
     }
-    
+
 
     [SpacetimeDB.Reducer]
     public static void SpawnBall(ReducerContext ctx)
@@ -36,16 +36,16 @@ public static partial class Module
         var ball = ctx.Db.Ball.Insert(new Ball
         {
             Id = 0,
-            X = player.X,
-            Y = player.Y,
+            X = player.X + MathF.Cos(player.AimAngle) * (player.PaddleRadius + ctx.Db.GameSettings.Iter().FirstOrDefault().BallRadius), // Spawn at edge of paddle
+            Y = player.Y + MathF.Sin(player.AimAngle) * (player.PaddleRadius + ctx.Db.GameSettings.Iter().FirstOrDefault().BallRadius), // Spawn at edge of paddle
             VelocityX = velocityX,
             VelocityY = velocityY,
-            Radius = 10f,
+            Radius = ctx.Db.GameSettings.Iter().FirstOrDefault().BallRadius,
             CreatedAt = ctx.Timestamp
         });
 
         Log.Info($"Ball {ball.Id} spawned by {player.Name}");
     }
 
-    
+
 }
