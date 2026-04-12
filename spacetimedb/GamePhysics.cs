@@ -91,6 +91,58 @@ public static partial class Module
         }
 
         /// <summary>
+        /// Check and handle collision with world borders.
+        /// Reflects velocity when hitting borders and clamps position within bounds.
+        /// </summary>
+        /// <param name="x">Current X position</param>
+        /// <param name="y">Current Y position</param>
+        /// <param name="vx">Current X velocity</param>
+        /// <param name="vy">Current Y velocity</param>
+        /// <param name="radius">Object radius</param>
+        /// <param name="worldWidth">World width (centered at 0)</param>
+        /// <param name="worldHeight">World height (centered at 0)</param>
+        /// <returns>Corrected position and velocity after border collision</returns>
+        public static (float newX, float newY, float newVx, float newVy) CheckWorldBorderCollision(
+            float x, float y, float vx, float vy, float radius,
+            float worldWidth, float worldHeight)
+        {
+            float newX = x;
+            float newY = y;
+            float newVx = vx;
+            float newVy = vy;
+
+            // Calculate world boundaries (centered at origin)
+            float halfWidth = worldWidth / 2f;
+            float halfHeight = worldHeight / 2f;
+
+            // Check left/right borders
+            if (x - radius < -halfWidth)
+            {
+                newX = -halfWidth + radius; // Clamp position
+                newVx = MathF.Abs(vx); // Reflect velocity (make positive)
+            }
+            else if (x + radius > halfWidth)
+            {
+                newX = halfWidth - radius; // Clamp position
+                newVx = -MathF.Abs(vx); // Reflect velocity (make negative)
+            }
+
+            // Check top/bottom borders
+            if (y - radius < -halfHeight)
+            {
+                newY = -halfHeight + radius; // Clamp position
+                newVy = MathF.Abs(vy); // Reflect velocity (make positive)
+            }
+            else if (y + radius > halfHeight)
+            {
+                newY = halfHeight - radius; // Clamp position
+                newVy = -MathF.Abs(vy); // Reflect velocity (make negative)
+            }
+
+            return (newX, newY, newVx, newVy);
+        }
+
+        /// <summary>
         /// Normalize angle in radians to 0-2π range
         /// </summary>
         private static float NormalizeAngle(float angle)

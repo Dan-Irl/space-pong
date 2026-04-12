@@ -1,25 +1,26 @@
-import { useState, useEffect } from 'react';
-import { useSpacetimeDB, useTable, useReducer } from 'spacetimedb/react';
-import { reducers, tables } from './module_bindings';
-import { GameCanvas } from './components/GameCanvas';
-import './App.css';
+import { useState, useEffect } from "react";
+import { useSpacetimeDB, useTable, useReducer } from "spacetimedb/react";
+import { reducers, tables } from "./module_bindings";
+import { GameCanvas } from "./components/GameCanvas";
+import "./App.css";
 
 function App() {
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState("");
   const [hasJoined, setHasJoined] = useState(false);
-  
+
   const { identity, isActive: connected } = useSpacetimeDB();
   const joinGame = useReducer(reducers.joinGame);
   const movePlayer = useReducer(reducers.movePlayer);
   const spawnBall = useReducer(reducers.spawnBall);
 
-  // Subscribe to all players and balls
+  // Subscribe to all players, balls, and game settings
   const [players] = useTable(tables.Player);
   const [balls] = useTable(tables.Ball);
+  const [gameSettings] = useTable(tables.GameSettings);
 
   // Get current player
-  const currentPlayer = identity 
-    ? Array.from(players).find(p => p.id.isEqual(identity))
+  const currentPlayer = identity
+    ? Array.from(players).find((p) => p.id.isEqual(identity))
     : null;
 
   // Check if player has joined
@@ -72,16 +73,22 @@ function App() {
     );
   }
 
+  const currentGameSettings =
+    gameSettings.length > 0 ? gameSettings[0] : undefined;
+
   return (
     <div className="game-container">
       <div className="game-info">
         <h2>Space Pong</h2>
         <p>Player: {currentPlayer?.name}</p>
-        <p>Players: {players.length} | Balls: {balls.length}</p>
+        <p>
+          Players: {players.length} | Balls: {balls.length}
+        </p>
       </div>
       <GameCanvas
         players={players}
         balls={balls}
+        gameSettings={currentGameSettings}
         identity={identity}
         hasJoined={hasJoined}
         onMove={handleMove}

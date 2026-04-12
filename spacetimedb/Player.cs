@@ -15,6 +15,8 @@ public static partial class Module
         // In Player.cs
         public readonly float PaddleAngle => AimAngle + MathF.PI;
 
+        public float VelocityX; // Player velocity in X direction
+        public float VelocityY; // Player velocity in Y direction
 
         ///<summary>
         /// Angle that defines the size of the paddle arc
@@ -47,7 +49,9 @@ public static partial class Module
             Name = playerName,
             AimAngle = randomAngle,
             PaddleArcAngle = MathF.PI / 4, // 45 degree paddle arc
-            PaddleRadius = 30
+            PaddleRadius = 30,
+            VelocityX = 0,
+            VelocityY = 0
         });
 
         Log.Info($"Player {playerName} joined at angle {randomAngle}");

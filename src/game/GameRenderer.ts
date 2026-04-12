@@ -1,23 +1,34 @@
 import type { Infer } from 'spacetimedb';
 import type PlayerRow from '../module_bindings/player_table';
 import type BallRow from '../module_bindings/ball_table';
+import type GameSettingsRow from '../module_bindings/game_settings_table';
 import type { Identity } from 'spacetimedb';
 import { PlayerRenderer } from './PlayerRenderer';
 
 type Player = Infer<typeof PlayerRow>;
 type Ball = Infer<typeof BallRow>;
+type GameSettings = Infer<typeof GameSettingsRow>;
 
 export class GameRenderer {
   private ctx: CanvasRenderingContext2D;
   private canvasWidth: number;
   private canvasHeight: number;
   private playerRenderer: PlayerRenderer;
+  private worldWidth: number = 1000;
+  private worldHeight: number = 1000;
 
   constructor(ctx: CanvasRenderingContext2D, width: number, height: number) {
     this.ctx = ctx;
     this.canvasWidth = width;
     this.canvasHeight = height;
     this.playerRenderer = new PlayerRenderer(ctx);
+  }
+
+  updateWorldSize(gameSettings: GameSettings | undefined) {
+    if (gameSettings) {
+      this.worldWidth = gameSettings.worldWidth;
+      this.worldHeight = gameSettings.worldHeight;
+    }
   }
 
   clear() {
@@ -40,20 +51,23 @@ export class GameRenderer {
     // Clear the physical screen
     this.clear();
 
-    // Find the current player to center the camera on
-    const currentPlayer = players.find(p => 
-      currentPlayerIdentity?.isEqual(p.id) ?? false
-    );
-
     // Save the default canvas state
     this.ctx.save();
 
-    // Apply camera translation to center on current player
-    if (currentPlayer) {
-      const cameraOffsetX = (this.canvasWidth / 2) - currentPlayer.x;
-      const cameraOffsetY = (this.canvasHeight / 2) - currentPlayer.y;
-      this.ctx.translate(cameraOffsetX, cameraOffsetY);
-    }
+    // Transform world coordinates to canvas coordinates
+    // World: (-worldWidth/2, -worldHeight/2) to (worldWidth/2, worldHeight/2)
+    // Canvas: (0, 0) to (canvasWidth, canvasHeight)
+
+    // Calculate scale to fit world in canvas
+    const scaleX = this.canvasWidth / this.worldWidth;
+    const scaleY = this.canvasHeight / this.worldHeight;
+    const scale = Math.min(scaleX, scaleY); // Use smaller scale to fit both dimensions
+
+    // Translate to center the world in the canvas
+    this.ctx.translate(this.canvasWidth / 2, this.canvasHeight / 2);
+
+    // Apply scale
+    this.ctx.scale(scale, scale);
 
     // Draw all players using PlayerRenderer
     this.playerRenderer.drawAll(players, currentPlayerIdentity);
@@ -63,9 +77,7 @@ export class GameRenderer {
       this.drawBall(ball);
     });
 
-    // Restore canvas state (anything drawn after this won't move with camera)
+    // Restore canvas state
     this.ctx.restore();
-    
-    // UI elements that should be pinned to screen would go here
   }
 }

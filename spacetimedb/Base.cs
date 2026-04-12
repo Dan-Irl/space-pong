@@ -10,12 +10,12 @@ public static partial class Module
     {
         [SpacetimeDB.PrimaryKey]
         public ulong Id;
-        
+
         [SpacetimeDB.Default(1000f)]
         public float WorldWidth;
         [SpacetimeDB.Default(1000f)]
         public float WorldHeight;
-        
+
         [SpacetimeDB.Default(250f)]
 
         public float BallSpeed;
@@ -30,7 +30,7 @@ public static partial class Module
     {
         [SpacetimeDB.PrimaryKey]
         public ulong Id;
-        
+
         public ScheduleAt ScheduledAt;
     }
 
@@ -47,14 +47,14 @@ public static partial class Module
             BallRadius = 10f,
             BallLifetimeSeconds = 5f
         });
-        
+
         // Initialize the game tick loop
         ctx.Db.GameTick.Insert(new GameTick
         {
             Id = 1,
             ScheduledAt = new ScheduleAt.Interval(_gametick)
         });
-        
+
         Log.Info("Game initialized");
     }
 }

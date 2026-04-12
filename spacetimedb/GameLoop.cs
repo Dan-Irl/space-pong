@@ -11,15 +11,44 @@ public static partial class Module
         // Fetch all data once
         var balls = ctx.Db.Ball.Iter().ToList();
         var players = ctx.Db.Player.Iter().ToList();
+        var gameSettings = ctx.Db.GameSettings.Iter().FirstOrDefault();
+
+        // Update all players
+        UpdateAllPlayers(ctx, players, gameSettings);
 
         // Update all balls
-        UpdateAllBalls(ctx, balls);
+        UpdateAllBalls(ctx, balls, gameSettings);
 
         // Check collisions
         CheckCollisions(ctx, balls, players);
     }
 
-    private static void UpdateAllBalls(ReducerContext ctx, List<Ball> balls)
+    private static void UpdateAllPlayers(ReducerContext ctx, List<Player> players, GameSettings gameSettings)
+    {
+        foreach (var player in players)
+        {
+            // Update player position based on velocity and game tick duration
+            var newX = player.X + player.VelocityX * _gametick.Microseconds / 1_000_000.0f;
+            var newY = player.Y + player.VelocityY * _gametick.Microseconds / 1_000_000.0f;
+
+            // Check border collision and reflect if needed
+            var (correctedX, correctedY, correctedVx, correctedVy) = GamePhysics.CheckWorldBorderCollision(
+                newX, newY, player.VelocityX, player.VelocityY, player.PlayerRadius,
+                gameSettings.WorldWidth, gameSettings.WorldHeight
+            );
+
+            // Update player in database
+            ctx.Db.Player.Id.Update(player with
+            {
+                X = correctedX,
+                Y = correctedY,
+                VelocityX = correctedVx,
+                VelocityY = correctedVy
+            });
+        }
+    }
+
+    private static void UpdateAllBalls(ReducerContext ctx, List<Ball> balls, GameSettings gameSettings)
     {
         foreach (var ball in balls)
         {
@@ -38,11 +67,19 @@ public static partial class Module
             var newX = ball.X + ball.VelocityX * _gametick.Microseconds / 1_000_000.0f;
             var newY = ball.Y + ball.VelocityY * _gametick.Microseconds / 1_000_000.0f;
 
-            // Update ball position in database
+            // Check border collision and reflect if needed
+            var (correctedX, correctedY, correctedVx, correctedVy) = GamePhysics.CheckWorldBorderCollision(
+                newX, newY, ball.VelocityX, ball.VelocityY, ball.Radius,
+                gameSettings.WorldWidth, gameSettings.WorldHeight
+            );
+
+            // Update ball position and velocity in database
             ctx.Db.Ball.Id.Update(ball with
             {
-                X = newX,
-                Y = newY
+                X = correctedX,
+                Y = correctedY,
+                VelocityX = correctedVx,
+                VelocityY = correctedVy
             });
         }
     }
@@ -74,6 +111,33 @@ public static partial class Module
                     if (reflection.HasValue)
                     {
                         var (newVx, newVy) = reflection.Value;
+
+                        // Calculate momentum transfer to player
+                        // Normal vector from player to ball
+                        float dx = ball.X - player.X;
+                        float dy = ball.Y - player.Y;
+                        float length = MathF.Sqrt(dx * dx + dy * dy);
+
+                        if (length > 0.0001f)
+                        {
+                            float normalX = dx / length;
+                            float normalY = dy / length;
+
+                            // Calculate the impact force (velocity component towards player before reflection)
+                            float dotProduct = ball.VelocityX * normalX + ball.VelocityY * normalY;
+
+                            // Transfer a small portion of the impact momentum to the player
+                            const float momentumTransferFactor = 0.15f; // 15% of impact momentum
+                            float playerVelocityDeltaX = normalX * MathF.Abs(dotProduct) * momentumTransferFactor;
+                            float playerVelocityDeltaY = normalY * MathF.Abs(dotProduct) * momentumTransferFactor;
+
+                            // Update player velocity
+                            ctx.Db.Player.Id.Update(player with
+                            {
+                                VelocityX = player.VelocityX + playerVelocityDeltaX,
+                                VelocityY = player.VelocityY + playerVelocityDeltaY
+                            });
+                        }
 
                         // Update ball with new velocity
                         ctx.Db.Ball.Id.Update(ball with
