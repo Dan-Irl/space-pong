@@ -1,8 +1,10 @@
 import { useEffect, type RefObject } from 'react';
+import type { Player } from '../module_bindings/types';
 
 interface UseGameInputProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   hasJoined: boolean;
+  player: Player;
   onMove: (angle: number) => void;
   onShoot: () => void;
 }
@@ -10,6 +12,7 @@ interface UseGameInputProps {
 export const useGameInput = ({
   canvasRef,
   hasJoined,
+  player,
   onMove,
   onShoot,
 }: UseGameInputProps) => {

@@ -9,7 +9,7 @@ interface GameCanvasProps {
   paddles: readonly Paddle[];
   balls: readonly Ball[];
   gameSettings: GameSettings | undefined;
-  identity: Identity | undefined;
+  identity: Identity;
   hasJoined: boolean;
   onMove: (angle: number) => void;
   onShoot: () => void;
@@ -32,8 +32,10 @@ export function GameCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<GameRenderer | null>(null);
 
+  const Player: Player = players.find(p => p.id.isEqual(identity)) as Player;
+
   // Handle all input via event listeners
-  useGameInput({ canvasRef, hasJoined, onMove, onShoot });
+  useGameInput({ canvasRef, hasJoined, player: Player, onMove, onShoot });
 
   // Render game on canvas
   useEffect(() => {
